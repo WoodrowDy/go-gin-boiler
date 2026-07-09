@@ -70,6 +70,30 @@ go-gin-boiler/
 └── lefthook.yml
 ```
 
+### 왜 이 구조인가 — Go와 레이어드 아키텍처
+
+nest-boiler의 레이어드 아키텍처를 Go로 옮기기 전에 조사한 배경. **결론: "의존성 레이어링"은 Go가 강제하는 것이라 완벽히 맞고, "레이어별 폴더"는 Go와 충돌해서 도메인 패키지 방식으로 변형했다.**
+
+- **의존성이 한 방향으로 흐르는 것(개념적 레이어링)은 Go와 완벽히 맞는다 — 선택이 아니라 강제.**
+  Go 컴파일러는 순환 import를 금지하므로 모든 Go 프로그램은 DAG가 될 수밖에 없다.
+  "레이어링과 싸우지 말고 그 위에 아키텍처를 지어라"가 Go의 태도.
+  handler → service → repository 단방향 의존은 TS에선 eslint로 막았지만 Go에선 컴파일러가 공짜로 보장한다.
+  → 근거: [Layered Design in Go (jerf.org)](https://www.jerf.org/iri/post/2025/go_layered_design/)
+
+- **레이어를 폴더(패키지)로 나누는 것은 Go와 안 맞는다.**
+  `controllers/`, `services/` 식 레이어별 패키지는 (1) 패키지가 Go의 유일한 캡슐화 단위(대문자=export)라
+  도메인 내부 구현을 숨길 곳이 없어지고, (2) 도메인 간 참조가 얽히는 순간 순환 import로 컴파일이 거부된다.
+  커뮤니티가 수렴한 답 = **package-by-feature**(도메인당 패키지 하나, 그 안에 레이어 파일). 이 레포 구조의 근거.
+  → 근거: [Standard Package Layout (Ben Johnson)](https://medium.com/@benbjohnson/standard-package-layout-7cdbc8391fc1),
+  [Why Clean Architecture Struggles in Golang](https://dev.to/lucasdeataides/why-clean-architecture-struggles-in-golang-and-what-works-better-m4g)
+
+- **Clean Architecture식 관행을 그대로 이식하면 마찰이 나는 지점 3가지.**
+  ① 모든 레이어에 인터페이스 + DI 컨테이너 → Go는 "인터페이스는 사용하는 쪽에, 필요할 때만" + 생성자 수동 조립이 관례.
+  ② 레이어별 mock 단위 테스트 중심 문화 → Go는 통합/e2e 테스트 선호.
+  ③ 과도한 추상화 자체가 Go의 단순성 철학과 충돌.
+  → 근거: [Flat structure vs. layered architecture (LogRocket)](https://blog.logrocket.com/flat-structure-vs-layered-architecture-structuring-your-go-app/),
+  [Why Clean Architecture Struggles in Golang](https://dev.to/lucasdeataides/why-clean-architecture-struggles-in-golang-and-what-works-better-m4g)
+
 ## 레이어 규칙 (nest-boiler와 동일, 도구만 다름)
 
 - **entity.go = 영속성 전용.** GORM 태그만. `json:` 태그도 두지 않는다 (응답 계약은 dto.go 소유).
@@ -87,6 +111,10 @@ go-gin-boiler/
   })
   ```
 - 규칙의 기계적 강제는 golangci-lint **depguard/gomodguard** 로 (eslint no-restricted-imports 대응).
+- **인터페이스는 최소화.** 레이어마다 인터페이스를 미리 깔지 않는다(NestJS 습관 금지).
+  구체 타입으로 시작하고, mock이 실제로 필요해지는 순간에 **사용하는 쪽에** 인터페이스를 정의한다.
+  → 근거: [Go 공식 코드리뷰 가이드 — Interfaces](https://go.dev/wiki/CodeReviewComments#interfaces),
+  [Standard Package Layout (Ben Johnson)](https://medium.com/@benbjohnson/standard-package-layout-7cdbc8391fc1)
 
 ---
 
