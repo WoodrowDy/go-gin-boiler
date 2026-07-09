@@ -1,0 +1,18 @@
+# IDE
+.idea/
+.vscode/
+
+# Build
+bin/
+tmp/
+*.exe
+
+# Env (템플릿 .example만 커밋)
+envs/.env.*
+!envs/.env.*.example
+
+# Swagger 생성물 (Step 8에서 정책 결정)
+# docs/
+
+# Test
+coverage.out
