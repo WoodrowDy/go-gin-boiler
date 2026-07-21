@@ -123,9 +123,9 @@ nest-boiler의 레이어드 아키텍처를 Go로 옮기기 전에 조사한 배
 각 스텝은 "무엇을 / 왜 / TS 개발자용 학습 포인트" 가이드를 받고 직접 구현한다.
 한 스텝 = 한 커밋(또는 몇 개) 단위로 끊는다.
 
-- [ ] **Step 0 — 환경 준비**: Go 툴체인 정리, golangci-lint·air·swag·migrate CLI 설치, `.gitignore`, 첫 커밋
+- [x] **Step 0 — 환경 준비**: Go 툴체인 정리, golangci-lint·air·swag·migrate CLI 설치, `.gitignore`, 첫 커밋
       · 학습 포인트: GOPATH는 잊어라, go.mod가 package.json이다. `go install`과 `go get`의 차이
-- [ ] **Step 1 — Gin Hello World + 프로젝트 뼈대**: `cmd/api/main.go`로 이동, health check 엔드포인트, graceful shutdown
+- [x] **Step 1 — Gin Hello World + 프로젝트 뼈대**: `cmd/api/main.go`로 이동, health check 엔드포인트, graceful shutdown
       · 학습 포인트: 고루틴 + 시그널 채널(`signal.NotifyContext`) — Node의 `process.on('SIGINT')`과 비교
 - [ ] **Step 2 — 설정(config)**: envs/ 구조 이식, `APP_ENV`별 .env 로딩, 구조체 기반 파싱+필수값 검증
       · 학습 포인트: 구조체 태그가 데코레이터의 자리를 대신한다. zero value 개념
