@@ -16,3 +16,6 @@ envs/.env.*
 
 # Test
 coverage.out
+
+# Claude
+.claude/
