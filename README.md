@@ -127,7 +127,7 @@ nest-boiler의 레이어드 아키텍처를 Go로 옮기기 전에 조사한 배
       · 학습 포인트: GOPATH는 잊어라, go.mod가 package.json이다. `go install`과 `go get`의 차이
 - [x] **Step 1 — Gin Hello World + 프로젝트 뼈대**: `cmd/api/main.go`로 이동, health check 엔드포인트, graceful shutdown
       · 학습 포인트: 고루틴 + 시그널 채널(`signal.NotifyContext`) — Node의 `process.on('SIGINT')`과 비교
-- [ ] **Step 2 — 설정(config)**: envs/ 구조 이식, `APP_ENV`별 .env 로딩, 구조체 기반 파싱+필수값 검증
+- [x] **Step 2 — 설정(config)**: envs/ 구조 이식, `APP_ENV`별 .env 로딩, 구조체 기반 파싱+필수값 검증
       · 학습 포인트: 구조체 태그가 데코레이터의 자리를 대신한다. zero value 개념
 - [ ] **Step 3 — 로깅 + traceId**: slog 설정, traceId 미들웨어(X-Request-Id), 요청/응답 로거 미들웨어
       · 학습 포인트: ⭐ `context.Context` — AsyncLocalStorage처럼 "암묵적 전파"가 아니라 **명시적으로 첫 인자로 흘려보낸다**. Go에서 가장 중요한 관례
