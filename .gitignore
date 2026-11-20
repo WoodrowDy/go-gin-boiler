@@ -11,7 +11,7 @@ tmp/
 envs/.env.*
 !envs/.env.*.example
 
-# Swagger 생성물 (Step 8에서 정책 결정)
+# Swagger 생성물 (Step 9에서 정책 결정)
 # docs/
 
 # Test

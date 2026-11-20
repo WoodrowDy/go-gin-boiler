@@ -11,7 +11,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/doyeonk/go-gin-boiler/internal/global/config"
+	"github.com/WoodrowDy/go-gin-boiler/internal/global/config"
 	"github.com/gin-gonic/gin"
 )
 

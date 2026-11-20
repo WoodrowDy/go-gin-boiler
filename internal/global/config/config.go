@@ -15,7 +15,7 @@ type Config struct {
 	App    App
 	Server Server
 	// TODO(step-5):  DB  DB      // DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
-	// TODO(step-11): JWT JWT     // JWT_SECRET
+	// TODO(step-12): JWT JWT     // JWT_SECRET
 }
 
 const (
@@ -48,7 +48,6 @@ func Load() (*Config, error) {
 		appEnv = EnvLocal
 	}
 
-	// TODO: appEnv 가 EnvLocal/Dev/Prod/Test 중 하나인지 검사 → 아니면 fmt.Errorf 반환
 	switch appEnv {
 	case EnvLocal, EnvDev, EnvProd, EnvTest:
 	default:
@@ -60,13 +59,10 @@ func Load() (*Config, error) {
 		log.Printf("config: no env file at %s, using OS env", path)
 	}
 
-	// TODO: cfg 선언하고 env.Parse(&cfg) → 에러면 감싸서 반환
 	cfg := &Config{}
 	if err := env.Parse(cfg); err != nil {
 		return nil, fmt.Errorf("failed to parse env: %w", err)
 	}
 
-	// TODO: &cfg, nil 반환
 	return cfg, nil
-
 }

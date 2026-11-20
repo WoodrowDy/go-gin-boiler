@@ -1,4 +1,4 @@
-module github.com/doyeonk/go-gin-boiler
+module github.com/WoodrowDy/go-gin-boiler
 
 go 1.25.0
 
