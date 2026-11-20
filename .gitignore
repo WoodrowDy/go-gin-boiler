@@ -1,6 +1,7 @@
 # IDE
 .idea/
 .vscode/
+.DS_Store
 
 # Build
 bin/
@@ -19,3 +20,4 @@ coverage.out
 
 # Claude
 .claude/
+
