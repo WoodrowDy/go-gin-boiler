@@ -14,7 +14,8 @@ import (
 // Go 에는 try/catch 가 없다. 보통의 실패는 error 값으로 돌려주고, panic 은 "여기 올 리 없다" 는
 // 버그(nil 역참조, 범위 밖 인덱스)에서만 난다. 그런 버그 하나가 서버 전체를 내리지 않게 막는 층이다.
 //
-// 스택은 로그에만 남기고 응답에는 싣지 않는다. 둘을 잇는 것은 traceId 다.
+// 스택은 로그에만 남기고 응답에는 싣지 않는다. 응답은 ErrorHandler 와 같은 모양이고,
+// 둘을 잇는 것은 meta.traceId 다.
 //
 // AccessLog 뒤에 등록한다. 그래야 여기서 500 으로 바꾼 뒤에 AccessLog 가 그 상태를 읽어 HTTP RES 를 남긴다.
 func Recovery() gin.HandlerFunc {
@@ -32,8 +33,7 @@ func Recovery() gin.HandlerFunc {
 				"stack", string(debug.Stack()),
 			)
 
-			// TODO(step-4): 본문을 에러 응답 규약({ message, error, statusCode, meta })으로.
-			c.AbortWithStatus(http.StatusInternalServerError)
+			writeError(c, http.StatusInternalServerError, messageInternalError)
 		}()
 
 		c.Next()

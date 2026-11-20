@@ -188,7 +188,7 @@ func TestRecovery_LogsPanic(t *testing.T) {
 	if stack, _ := found["stack"].(string); stack == "" {
 		t.Error("스택이 비어 있다")
 	}
-	if w.Body.Len() != 0 {
-		t.Errorf("응답 본문에 내용이 실렸다: %s", w.Body.String())
+	if bytes.Contains(w.Body.Bytes(), []byte("boom")) {
+		t.Errorf("응답 본문에 panic 내용이 실렸다: %s", w.Body.String())
 	}
 }

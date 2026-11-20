@@ -29,15 +29,22 @@ func newRouter(env string) *gin.Engine {
 	//   TraceID   — 맨 앞. 뒤의 모든 것이 traceId 가 실린 ctx 를 본다.
 	//   AccessLog — 접근 로그. Recovery 바깥이라 panic 이 500 으로 바뀐 뒤의 상태를 읽는다.
 	//               local 은 HTTP RES 한 줄만(터미널에서 읽기 좋게), 그 외는 HTTP REQ 도 남긴다(헤더 포함).
-	//   Recovery  — 핸들러에 가장 가깝게. panic 을 잡아 500 으로 바꾼다.
+	//   Recovery  — panic 을 잡아 500 으로 바꾼다.
+	//   ErrorHandler — 핸들러에 가장 가깝게. 핸들러가 c.Error(err) 로 남긴 에러를 응답 규약으로 바꾼다.
 	r.Use(
 		middleware.TraceID(),
 		middleware.AccessLog(middleware.AccessLogOptions{
 			LogRequest: env != config.EnvLocal,
 		}),
 		middleware.Recovery(),
+		middleware.ErrorHandler(),
 	)
 
+	// 등록되지 않은 경로의 404 도 같은 응답 규약으로.
+	r.NoRoute(middleware.NoRoute())
+
+	// /ping 은 응답 규약({ row, meta }) 밖에 둔다 — 의도한 예외다.
+	// 로드밸런서·오케스트레이터가 찌르는 probe 용이라, 받는 쪽은 상태 코드만 본다.
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"message": "pong",
