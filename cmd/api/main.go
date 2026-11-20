@@ -6,19 +6,21 @@ import (
 	"context"
 	"errors"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/WoodrowDy/go-gin-boiler/internal/global/config"
+	"github.com/WoodrowDy/go-gin-boiler/internal/global/logger"
 	"github.com/gin-gonic/gin"
 )
 
 // newRouter는 라우터를 조립해서 반환한다.
 // main()과 테스트가 둘 다 이 함수를 부른다 — 함수로 뽑은 유일한 이유.
 func newRouter() *gin.Engine {
-	// TODO(step-3): gin.New() + Recovery + slog 로거 미들웨어로 교체.
+	// TODO(step-3-3): gin.New() + Recovery + slog 로거 미들웨어로 교체.
 	//               Default()가 붙여주는 Logger는 traceId를 모르고 비구조화 텍스트를 뿌린다.
 	r := gin.Default() // = gin.New() + Logger + Recovery
 
@@ -50,6 +52,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	// ★ Step 3-1: 로거는 config 다음에 만든다 — 포맷을 고르려면 cfg.App.Env 가 있어야 한다.
+	//    그래서 위의 config 실패 로그만 표준 log 로 남는다(그 시점엔 아직 slog 가 없다).
+	//    SetDefault 로 등록해 두면 이후 어디서든 slog.Info(...) 가 이 로거를 쓴다.
+	slog.SetDefault(logger.New(cfg.App.Env))
+
 	// ② 서버를 직접 만든다. router.Run()을 쓰지 않는 이유는 shutdown 훅이 없기 때문.
 	//    이 { } 안에는 "필드: 값" 만 온다.
 	srv := &http.Server{
@@ -66,8 +73,7 @@ func main() {
 		IdleTimeout:       cfg.Server.IdleTimeout,
 	}
 
-	// TODO(step-3): log → slog
-	log.Printf("starting server on %s", cfg.Server.Addr())
+	slog.Info("starting server", "addr", cfg.Server.Addr())
 
 	// ③ 서버를 별도 고루틴에서 띄운다.
 	//    ListenAndServe()는 서버가 죽을 때까지 리턴하지 않는 블로킹 호출이라,
@@ -79,7 +85,7 @@ func main() {
 		// == 대신 errors.Is를 쓰는 이유: Go는 fmt.Errorf("...: %w", err)로 에러를 감싸는 게
 		// 관례라, 감싸인 에러는 ==로 못 잡는다. errors.Is는 껍질을 벗겨가며 비교한다.
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Printf("listen: %v", err)
+			slog.Error("listen failed", "err", err)
 		}
 	}() // ← 이 () 가 "지금 호출한다". go 뒤에는 반드시 호출이 와야 한다.
 
@@ -89,7 +95,7 @@ func main() {
 	//    main이 반드시 어딘가에서 블로킹하고 있어야 한다.
 	<-ctx.Done()
 
-	log.Println("shutting down...")
+	slog.Info("shutting down")
 
 	// ⑤ 종료 대기용 context를 새로 판다.
 	//    ⚠️ 위의 ctx를 넘기면 안 된다. 방금 시그널로 이미 취소된 상태라
@@ -104,8 +110,8 @@ func main() {
 	//    3) 처리 중인 요청이 끝나기를 기다린다  ← 이게 핵심
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		// 여기 오면 ShutdownTimeout 안에 요청들이 안 끝났다는 뜻이다.
-		log.Printf("forced shutdown: %v", err)
+		slog.Error("forced shutdown", "err", err)
 	}
 
-	log.Println("server stopped")
+	slog.Info("server stopped")
 }
