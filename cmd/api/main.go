@@ -14,15 +14,26 @@ import (
 
 	"github.com/WoodrowDy/go-gin-boiler/internal/global/config"
 	"github.com/WoodrowDy/go-gin-boiler/internal/global/logger"
+	"github.com/WoodrowDy/go-gin-boiler/internal/global/middleware"
 	"github.com/gin-gonic/gin"
 )
 
 // newRouter는 라우터를 조립해서 반환한다.
 // main()과 테스트가 둘 다 이 함수를 부른다 — 함수로 뽑은 유일한 이유.
 func newRouter() *gin.Engine {
-	// TODO(step-3-3): gin.New() + Recovery + slog 로거 미들웨어로 교체.
-	//               Default()가 붙여주는 Logger는 traceId를 모르고 비구조화 텍스트를 뿌린다.
-	r := gin.Default() // = gin.New() + Logger + Recovery
+	// ★ Step 3-3: gin.Default() 대신 gin.New() — 미들웨어가 하나도 없는 엔진에서 시작해 직접 붙인다.
+	//    Default() 가 붙여 주는 Logger 는 traceId 를 모르고 비구조화 텍스트를 뿌린다.
+	r := gin.New()
+
+	// 등록 순서가 곧 실행 순서다. 요청은 위에서 아래로 들어가고, 응답은 아래에서 위로 나온다.
+	//   TraceID   — 맨 앞. 뒤의 모든 것이 traceId 가 실린 ctx 를 본다.
+	//   AccessLog — HTTP REQ / HTTP RES. Recovery 바깥이라 panic 이 500 으로 바뀐 뒤의 상태를 읽는다.
+	//   Recovery  — 핸들러에 가장 가깝게. panic 을 잡아 500 으로 바꾼다.
+	r.Use(
+		middleware.TraceID(),
+		middleware.AccessLog(),
+		middleware.Recovery(),
+	)
 
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
@@ -56,6 +67,11 @@ func main() {
 	//    그래서 위의 config 실패 로그만 표준 log 로 남는다(그 시점엔 아직 slog 가 없다).
 	//    SetDefault 로 등록해 두면 이후 어디서든 slog.Info(...) 가 이 로거를 쓴다.
 	slog.SetDefault(logger.New(cfg.App.Env))
+
+	// Gin 은 기본이 debug 모드라 기동할 때 경고와 라우트 목록을 찍는다. local 에서만 그대로 둔다.
+	if cfg.App.Env != config.EnvLocal {
+		gin.SetMode(gin.ReleaseMode)
+	}
 
 	// ② 서버를 직접 만든다. router.Run()을 쓰지 않는 이유는 shutdown 훅이 없기 때문.
 	//    이 { } 안에는 "필드: 값" 만 온다.

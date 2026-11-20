@@ -2,6 +2,7 @@
 package logger
 
 import (
+	"io"
 	"log/slog"
 	"os"
 
@@ -13,6 +14,11 @@ import (
 //
 // config 전체가 아니라 env 문자열만 받는다 — 로거가 아는 것은 "어느 환경인가" 하나면 충분하다.
 func New(env string) *slog.Logger {
+	return slog.New(newHandler(os.Stdout, env))
+}
+
+// newHandler 는 출력 대상을 인자로 받는다. 테스트가 os.Stdout 대신 버퍼를 넣어 출력을 확인한다.
+func newHandler(w io.Writer, env string) slog.Handler {
 	readable := env == config.EnvLocal || env == config.EnvTest
 
 	// 최소 로그 레벨. local·test 는 Debug 까지, 그 외는 Info 부터.
@@ -27,10 +33,11 @@ func New(env string) *slog.Logger {
 	// 둘 다 담을 수 있는 인터페이스 타입으로 선언한다.
 	var handler slog.Handler
 	if readable {
-		handler = slog.NewTextHandler(os.Stdout, opts)
+		handler = slog.NewTextHandler(w, opts)
 	} else {
-		handler = slog.NewJSONHandler(os.Stdout, opts)
+		handler = slog.NewJSONHandler(w, opts)
 	}
 
-	return slog.New(handler)
+	// 포맷을 정한 핸들러를 한 겹 감싼다 — 모든 로그 줄에 traceId 를 붙이는 층.
+	return traceHandler{next: handler}
 }
