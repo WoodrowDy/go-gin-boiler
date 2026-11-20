@@ -254,7 +254,7 @@ func (s *Service) CreateBoard(ctx context.Context, payload PostBoardPayload) (*B
       · 학습 포인트: 고루틴 + 시그널 채널(`signal.NotifyContext`) — Node의 `process.on('SIGINT')`과 비교
 - [x] **Step 2 — 설정(config)**: envs/ 구조 이식, `APP_ENV`별 .env 로딩, 구조체 기반 파싱+필수값 검증
       · 학습 포인트: 구조체 태그가 데코레이터의 자리를 대신한다. zero value 개념
-- [ ] **Step 3 — 로깅 + traceId**: slog 설정, traceId 미들웨어(`X-Request-Id`), `HTTP REQ` / `HTTP RES` 접근 로그, 로그에서 자격증명 지우기
+- [x] **Step 3 — 로깅 + traceId**: slog 설정, traceId 미들웨어(`X-Request-Id`), `HTTP REQ` / `HTTP RES` 접근 로그, 로그에서 자격증명 지우기
       · 학습 포인트: ⭐ `context.Context` — AsyncLocalStorage처럼 "암묵적 전파"가 아니라 **명시적으로 첫 인자로 흘려보낸다**. Go에서 가장 중요한 관례
 - [ ] **Step 4 — 응답 규약 + 에러 처리**: 제네릭 `ObjectResponse[T]` / `ListResponse[T]`, `apperror`, 에러 미들웨어(응답 모양, 5xx 로그, 내용 비노출)
       · 학습 포인트: `error`는 값이다. `errors.Is/As`, 래핑(`fmt.Errorf("%w")`). 제네릭 타입 파라미터

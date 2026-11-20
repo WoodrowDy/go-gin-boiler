@@ -41,10 +41,14 @@ func decodeLogs(t *testing.T, buf *bytes.Buffer) []map[string]any {
 }
 
 func newTestRouter() *gin.Engine {
+	return newTestRouterWith(AccessLogOptions{LogRequest: true, SkipPaths: []string{"/skipped"}})
+}
+
+func newTestRouterWith(options AccessLogOptions) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 
 	r := gin.New()
-	r.Use(TraceID(), AccessLog("/skipped"), Recovery())
+	r.Use(TraceID(), AccessLog(options), Recovery())
 	r.GET("/ok", func(c *gin.Context) { c.Status(http.StatusOK) })
 	r.GET("/missing", func(c *gin.Context) { c.Status(http.StatusNotFound) })
 	r.GET("/skipped", func(c *gin.Context) { c.Status(http.StatusOK) })
@@ -95,6 +99,27 @@ func TestAccessLog(t *testing.T) {
 				t.Errorf("HTTP RES status = %v, want %d", got, tt.wantStatus)
 			}
 		})
+	}
+}
+
+func TestAccessLog_ResponseOnly(t *testing.T) {
+	buf := captureLogs(t)
+
+	// 옵션을 비워 두면 HTTP RES 한 줄만 남는다.
+	w := httptest.NewRecorder()
+	newTestRouterWith(AccessLogOptions{}).ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/ok", nil))
+
+	logs := decodeLogs(t, buf)
+	if len(logs) != 1 {
+		t.Fatalf("로그 %d줄, want 1", len(logs))
+	}
+	if logs[0]["msg"] != "HTTP RES" {
+		t.Errorf("msg = %v, want HTTP RES", logs[0]["msg"])
+	}
+	for _, key := range []string{"method", "path", "status", "durationMs", "clientIp"} {
+		if _, ok := logs[0][key]; !ok {
+			t.Errorf("HTTP RES 에 %s 가 없다", key)
+		}
 	}
 }
 

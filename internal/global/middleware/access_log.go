@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
+	"github.com/WoodrowDy/go-gin-boiler/internal/global/logger"
 )
 
 // sensitiveHeaders 는 값을 로그에 남기지 않는 헤더다.
@@ -20,18 +22,26 @@ var sensitiveHeaders = map[string]struct{}{
 
 const maskedValue = "***"
 
-// AccessLog 는 요청마다 로그 두 줄을 남긴다.
+// AccessLogOptions 는 접근 로그의 선택 사항이다. 비워 두면(zero value) HTTP RES 한 줄만 남긴다.
+type AccessLogOptions struct {
+	// LogRequest 가 true 면 들어올 때 HTTP REQ 도 남긴다(헤더 포함).
+	// 요청이 끝나지 않고 죽어도 흔적이 남고, 헤더를 나중에 볼 수 있다. 대신 요청마다 두 줄이 된다.
+	LogRequest bool
+
+	// SkipPaths 의 경로는 남기지 않는다(헬스체크처럼 주기적으로 들어와 로그를 덮는 것).
+	SkipPaths []string
+}
+
+// AccessLog 는 요청마다 접근 로그를 남긴다.
 //
-//   - HTTP REQ — 들어올 때. 메서드, 경로, 클라이언트 IP, 헤더(자격증명은 가린다).
-//   - HTTP RES — 나갈 때. 상태 코드와 소요 시간. 레벨은 상태로 정한다: 5xx error, 4xx warn, 그 외 info.
+//   - HTTP REQ — 들어올 때. 메서드, 경로, 클라이언트 IP, 헤더(자격증명은 가린다). LogRequest 일 때만.
+//   - HTTP RES — 나갈 때. 상태 코드, 소요 시간, 클라이언트 IP. 레벨은 상태로 정한다: 5xx error, 4xx warn, 그 외 info.
 //
 // traceId 는 여기서 붙이지 않는다. ctx 를 넘기면 로거의 핸들러가 붙인다.
 // 그래서 TraceID 미들웨어 뒤에 등록해야 한다.
-//
-// skipPaths 에 적은 경로는 남기지 않는다(헬스체크처럼 주기적으로 들어와 로그를 덮는 것).
-func AccessLog(skipPaths ...string) gin.HandlerFunc {
-	skip := make(map[string]struct{}, len(skipPaths))
-	for _, path := range skipPaths {
+func AccessLog(options AccessLogOptions) gin.HandlerFunc {
+	skip := make(map[string]struct{}, len(options.SkipPaths))
+	for _, path := range options.SkipPaths {
 		skip[path] = struct{}{}
 	}
 
@@ -45,13 +55,16 @@ func AccessLog(skipPaths ...string) gin.HandlerFunc {
 		ctx := c.Request.Context()
 		method := c.Request.Method
 		path := c.Request.URL.RequestURI() // 쿼리 문자열 포함
+		clientIP := c.ClientIP()
 
-		slog.InfoContext(ctx, "HTTP REQ",
-			"method", method,
-			"path", path,
-			"clientIp", c.ClientIP(),
-			headersAttr(c.Request.Header),
-		)
+		if options.LogRequest {
+			slog.InfoContext(ctx, logger.MsgHTTPRequest,
+				"method", method,
+				"path", path,
+				"clientIp", clientIP,
+				headersAttr(c.Request.Header),
+			)
+		}
 
 		// c.Next() 는 뒤에 등록된 미들웨어와 핸들러를 전부 실행하고 돌아온다.
 		// 이 줄 위는 "요청이 들어올 때", 아래는 "응답이 나갈 때" 다.
@@ -59,13 +72,20 @@ func AccessLog(skipPaths ...string) gin.HandlerFunc {
 
 		status := c.Writer.Status()
 
-		slog.Log(ctx, levelForStatus(status), "HTTP RES",
+		slog.Log(ctx, levelForStatus(status), logger.MsgHTTPResponse,
 			"method", method,
 			"path", path,
 			"status", status,
-			"durationMs", time.Since(start).Milliseconds(),
+			"durationMs", durationMs(time.Since(start)),
+			"clientIp", clientIP,
 		)
 	}
+}
+
+// durationMs 는 소요 시간을 밀리초로 바꾼다. 소수 셋째 자리(마이크로초)까지 남긴다.
+// 정수 밀리초로 자르면 1ms 안에 끝나는 요청이 전부 0 이 된다.
+func durationMs(d time.Duration) float64 {
+	return float64(d.Microseconds()) / 1000
 }
 
 func levelForStatus(status int) slog.Level {

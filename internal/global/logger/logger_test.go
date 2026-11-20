@@ -27,7 +27,7 @@ func TestNewHandler_Format(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var buf bytes.Buffer
-			slog.New(newHandler(&buf, tt.env)).Info("hello", "addr", ":8080")
+			slog.New(newHandler(&buf, tt.env, false)).Info("hello", "addr", ":8080")
 
 			if gotJSON := json.Valid(buf.Bytes()); gotJSON != tt.wantJSON {
 				t.Errorf("JSON 여부 = %v, want %v\n출력: %s", gotJSON, tt.wantJSON, buf.String())
@@ -49,7 +49,7 @@ func TestNewHandler_Level(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var buf bytes.Buffer
-			slog.New(newHandler(&buf, tt.env)).Debug("detail")
+			slog.New(newHandler(&buf, tt.env, false)).Debug("detail")
 
 			if gotDebug := buf.Len() > 0; gotDebug != tt.wantDebug {
 				t.Errorf("Debug 출력 여부 = %v, want %v", gotDebug, tt.wantDebug)
@@ -78,7 +78,7 @@ func TestNewHandler_TraceID(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var buf bytes.Buffer
-			tt.log(slog.New(newHandler(&buf, config.EnvLocal)))
+			tt.log(slog.New(newHandler(&buf, config.EnvLocal, false)))
 
 			if got := strings.Contains(buf.String(), "traceId=abc-123"); got != tt.want {
 				t.Errorf("traceId 포함 여부 = %v, want %v\n출력: %s", got, tt.want, buf.String())

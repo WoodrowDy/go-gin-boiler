@@ -20,18 +20,21 @@ import (
 
 // newRouter는 라우터를 조립해서 반환한다.
 // main()과 테스트가 둘 다 이 함수를 부른다 — 함수로 뽑은 유일한 이유.
-func newRouter() *gin.Engine {
+func newRouter(env string) *gin.Engine {
 	// ★ Step 3-3: gin.Default() 대신 gin.New() — 미들웨어가 하나도 없는 엔진에서 시작해 직접 붙인다.
 	//    Default() 가 붙여 주는 Logger 는 traceId 를 모르고 비구조화 텍스트를 뿌린다.
 	r := gin.New()
 
 	// 등록 순서가 곧 실행 순서다. 요청은 위에서 아래로 들어가고, 응답은 아래에서 위로 나온다.
 	//   TraceID   — 맨 앞. 뒤의 모든 것이 traceId 가 실린 ctx 를 본다.
-	//   AccessLog — HTTP REQ / HTTP RES. Recovery 바깥이라 panic 이 500 으로 바뀐 뒤의 상태를 읽는다.
+	//   AccessLog — 접근 로그. Recovery 바깥이라 panic 이 500 으로 바뀐 뒤의 상태를 읽는다.
+	//               local 은 HTTP RES 한 줄만(터미널에서 읽기 좋게), 그 외는 HTTP REQ 도 남긴다(헤더 포함).
 	//   Recovery  — 핸들러에 가장 가깝게. panic 을 잡아 500 으로 바꾼다.
 	r.Use(
 		middleware.TraceID(),
-		middleware.AccessLog(),
+		middleware.AccessLog(middleware.AccessLogOptions{
+			LogRequest: env != config.EnvLocal,
+		}),
 		middleware.Recovery(),
 	)
 
@@ -80,7 +83,7 @@ func main() {
 
 		// *gin.Engine이 http.Handler 인터페이스(= ServeHTTP 메서드 하나)를 만족해서
 		// 여기 그대로 들어간다. gin 쪽에 "implements" 선언 같은 건 없다.
-		Handler: newRouter(),
+		Handler: newRouter(cfg.App.Env),
 
 		// 타임아웃 4종. ShutdownTimeout은 http.Server의 필드가 아니라서 여기 없고, 아래 ⑤에서 쓴다.
 		ReadHeaderTimeout: cfg.Server.ReadHeaderTimeout,
