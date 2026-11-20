@@ -1,0 +1,30 @@
+# 로컬 개발/테스트용 Postgres
+# 사용: make db-up / make db-down / make db-reset
+# 자격증명은 envs/.env.docker 단일 소스에서 주입됩니다 (git 제외).
+#   최초 1회: cp envs/.env.docker.example envs/.env.docker
+services:
+  postgres:
+    # ★ -alpine 은 musl libc 다. 운영 DB 가 glibc(대부분의 관리형 Postgres)면
+    #   같은 버전이라도 한글 ORDER BY 순서가 갈릴 수 있다. 맞춰야 하면 -alpine 을 뗀다.
+    image: "postgres:16-alpine"
+    container_name: "go-gin-boiler-postgres"
+    # 컨테이너 자격증명/타임존을 파일 하나에서 주입 (단일 소스)
+    env_file:
+      - envs/.env.docker
+    ports:
+      # host:container — 포트 충돌 방지. nest-boiler 가 5434 를 쓴다.
+      # ★ 이 값은 envs/.env.docker 로 못 바꾼다 — env_file 은 컨테이너 안으로만 주입된다.
+      - "${POSTGRES_PORT:-5435}:5432"
+    healthcheck:
+      # 컨테이너 내부 env(env_file 주입값)로 확인 ($$ → 컨테이너에서 $ 로 평가)
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - go_gin_boiler_postgres_data:/var/lib/postgresql/data
+      # 최초 기동 시 추가 DB(go-gin-boiler) 생성
+      - ./scripts/postgres:/docker-entrypoint-initdb.d:ro
+
+volumes:
+  go_gin_boiler_postgres_data:

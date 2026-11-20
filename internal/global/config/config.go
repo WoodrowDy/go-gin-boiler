@@ -14,7 +14,7 @@ import (
 type Config struct {
 	App    App
 	Server Server
-	// TODO(step-5):  DB  DB      // DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
+	DB     DB // db.go
 	// TODO(step-12): JWT JWT     // JWT_SECRET
 }
 

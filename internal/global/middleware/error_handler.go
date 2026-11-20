@@ -8,11 +8,16 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/WoodrowDy/go-gin-boiler/internal/global/apperror"
+	"github.com/WoodrowDy/go-gin-boiler/internal/global/dberror"
 	"github.com/WoodrowDy/go-gin-boiler/internal/global/response"
 )
 
-// messageInternalError 는 모르는 에러에 싣는 문구다. 원래 에러의 내용은 응답에 싣지 않는다.
-const messageInternalError = "서버 오류가 발생했습니다."
+// 도메인 메시지가 없는 실패에 싣는 문구다. 원래 에러의 내용은 응답에 싣지 않는다.
+const (
+	messageInternalError       = "서버 오류가 발생했습니다."
+	messageUniqueViolation     = "이미 존재하는 값입니다."
+	messageForeignKeyViolation = "다른 데이터가 참조 중입니다."
+)
 
 // ErrorHandler 는 핸들러가 남긴 에러를 응답으로 바꾼다. nest-boiler 의 전역 예외 필터에 해당한다.
 //
@@ -27,6 +32,8 @@ const messageInternalError = "서버 오류가 발생했습니다."
 // 그러면 여기서 한 곳에서 모양을 맞춘다.
 //
 //   - apperror.Error (감싸여 있어도) → 그 상태 코드와 메시지.
+//   - 아무도 옮기지 않은 DB 제약 위반 → 409. service 가 놓쳐도 500 이 아니라 말이 되는 상태로 떨어진다.
+//     그래도 옮기는 자리는 service 가 먼저다 — 도메인 메시지는 거기에만 있다.
 //   - 그 밖의 에러                   → 500. 내용은 로그에만 남기고 응답에는 정해진 문구만 싣는다.
 //     스택이나 드라이버 메시지에는 테이블·컬럼 이름이 들어 있다. 추적은 meta.traceId 로 한다.
 //
@@ -71,7 +78,14 @@ func resolveError(err error) (status int, message string) {
 		return appErr.Status, appErr.Message
 	}
 
-	// TODO(step-5): 아무도 옮기지 않은 DB 제약 위반(23505 · 23503)은 409 로 떨어뜨린다.
+	// DB 에러는 의미가 있는 것만 바꾼다. 제약 위반은 업무 규칙 위반이라 409 로 옮기고,
+	// 그 외(연결 끊김 · 타임아웃)는 손대지 않고 500 으로 둔다. 전부 409 로 뭉개면 원인이 사라진다.
+	if dberror.IsUniqueViolation(err) {
+		return http.StatusConflict, messageUniqueViolation
+	}
+	if dberror.IsForeignKeyViolation(err) {
+		return http.StatusConflict, messageForeignKeyViolation
+	}
 
 	return http.StatusInternalServerError, messageInternalError
 }

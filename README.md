@@ -258,7 +258,7 @@ func (s *Service) CreateBoard(ctx context.Context, payload PostBoardPayload) (*B
       · 학습 포인트: ⭐ `context.Context` — AsyncLocalStorage처럼 "암묵적 전파"가 아니라 **명시적으로 첫 인자로 흘려보낸다**. Go에서 가장 중요한 관례
 - [x] **Step 4 — 응답 규약 + 에러 처리**: 제네릭 `ObjectResponse[T]` / `ListResponse[T]`, `apperror`, 에러 미들웨어(응답 모양, 5xx 로그, 내용 비노출)
       · 학습 포인트: `error`는 값이다. `errors.Is/As`, 래핑(`fmt.Errorf("%w")`). 제네릭 타입 파라미터
-- [ ] **Step 5 — Docker Postgres + GORM 연결**: docker-compose(포트 5435), scripts/db-*.sh 이식, GORM 연결, CoreHard / CoreSoft 공통 엔티티
+- [x] **Step 5 — Docker Postgres + GORM 연결**: docker-compose(포트 5435), scripts/db-*.sh 이식, GORM 연결, CoreHard / CoreSoft 공통 엔티티
       · 학습 포인트: `gorm.DeletedAt` = TypeORM `@DeleteDateColumn`. 커넥션 풀 설정은 Go에서 명시적. 제네릭 API `gorm.G[T]`
 - [ ] **Step 6 — 마이그레이션**: Atlas + atlas-provider-gorm, 이름 규칙·린트 스크립트 이식, 부팅 가드, 배포 환경 적용 경로(`migrate.sh`)
       · 학습 포인트: 엔티티 diff 로 만든 SQL 을 리뷰하는 흐름은 nest-boiler 와 같다. 달라지는 것은 산출물이 TS 클래스가 아니라 SQL 파일이라는 점

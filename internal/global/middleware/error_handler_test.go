@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/WoodrowDy/go-gin-boiler/internal/global/apperror"
 )
@@ -32,6 +33,15 @@ func newErrorTestRouter() *gin.Engine {
 		_ = c.Error(errors.New(`pq: relation "users" does not exist`))
 	})
 	r.GET("/panic", func(_ *gin.Context) { panic("boom") })
+	r.GET("/duplicate", func(c *gin.Context) {
+		_ = c.Error(fmt.Errorf("insert user: %w", &pgconn.PgError{Code: "23505", Message: "duplicate key"}))
+	})
+	r.GET("/in-use", func(c *gin.Context) {
+		_ = c.Error(&pgconn.PgError{Code: "23503", Message: "violates foreign key constraint"})
+	})
+	r.GET("/db-timeout", func(c *gin.Context) {
+		_ = c.Error(&pgconn.PgError{Code: "57014", Message: "canceling statement due to statement timeout"})
+	})
 
 	return r
 }
@@ -58,6 +68,18 @@ func TestErrorHandler(t *testing.T) {
 		},
 		{
 			name: "panic 도 같은 모양", path: "/panic",
+			wantStatus: http.StatusInternalServerError, wantMessage: messageInternalError, wantError: "Internal Server Error",
+		},
+		{
+			name: "놓친 유니크 위반은 409", path: "/duplicate",
+			wantStatus: http.StatusConflict, wantMessage: messageUniqueViolation, wantError: "Conflict",
+		},
+		{
+			name: "놓친 FK 위반은 409", path: "/in-use",
+			wantStatus: http.StatusConflict, wantMessage: messageForeignKeyViolation, wantError: "Conflict",
+		},
+		{
+			name: "그 밖의 DB 에러는 500", path: "/db-timeout",
 			wantStatus: http.StatusInternalServerError, wantMessage: messageInternalError, wantError: "Internal Server Error",
 		},
 		{

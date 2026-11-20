@@ -12,6 +12,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/WoodrowDy/go-gin-boiler/internal/database"
 	"github.com/WoodrowDy/go-gin-boiler/internal/global/config"
 	"github.com/WoodrowDy/go-gin-boiler/internal/global/logger"
 	"github.com/WoodrowDy/go-gin-boiler/internal/global/middleware"
@@ -83,6 +84,15 @@ func main() {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
+	// ★ Step 5: DB 에 연결한다. 닿지 않으면 뜨지 않는다 — 접속 정보가 틀린 채로 떠서 첫 요청에서 실패하는 것보다 낫다.
+	//    db 는 커넥션 하나가 아니라 풀이다. Step 7 에서 도메인을 조립할 때 repository · service 에 넘긴다.
+	db, err := database.Open(ctx, cfg.DB)
+	if err != nil {
+		slog.Error("database", "err", err)
+		os.Exit(1)
+	}
+	slog.Info("database connected", "host", cfg.DB.Host, "port", cfg.DB.Port, "name", cfg.DB.Name)
+
 	// ② 서버를 직접 만든다. router.Run()을 쓰지 않는 이유는 shutdown 훅이 없기 때문.
 	//    이 { } 안에는 "필드: 값" 만 온다.
 	srv := &http.Server{
@@ -137,6 +147,11 @@ func main() {
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		// 여기 오면 ShutdownTimeout 안에 요청들이 안 끝났다는 뜻이다.
 		slog.Error("forced shutdown", "err", err)
+	}
+
+	// ⑦ DB 는 서버 다음에 닫는다. 순서를 바꾸면 처리 중이던 요청이 닫힌 풀을 만난다.
+	if err := database.Close(db); err != nil {
+		slog.Error("close database", "err", err)
 	}
 
 	slog.Info("server stopped")
